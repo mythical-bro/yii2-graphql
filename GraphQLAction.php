@@ -6,6 +6,7 @@ use GraphQL\GraphQL;
 use GraphQL\Error\Debug;
 use GraphQL\Executor\Executor;
 use GraphQL\Experimental\Executor\CoroutineExecutor;
+use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Schema;
 use yii\base\Action;
 use yii\web\Response;
@@ -32,8 +33,8 @@ class GraphQLAction extends Action
 
         // Create schema
         $schema = new Schema([
-            'query' => QueryType::create($this->queries),
-            'mutation' => MutationType::create($this->mutations),
+            'query' => $this->createObject('Query', $this->queries),
+            'mutation' => $this->createObject('Mutation', $this->mutations),
         ]);
 
         $result = GraphQL::executeQuery(
@@ -58,6 +59,29 @@ class GraphQLAction extends Action
 
         // Return result
         return $result->toArray($debug);
+    }
+
+    protected function createObject($name, array $fields = []): ObjectType
+    {
+        $config = [
+            'name' => $name,
+            'fields' => function () use ($fields) {
+                $result = [];
+                foreach ($fields as $name => $field) {
+                    $result[$name] = static::composeFields($field);
+                }
+                return $result;
+            }
+        ];
+        return new ObjectType($config);
+    }
+
+    protected function composeFields($field): array
+    {
+        if (is_array($field)) {
+            return $field;
+        }
+        throw new InvalidArgumentException();
     }
 
     /**
