@@ -1,0 +1,23 @@
+{
+    "name": "mg-code/yii2-graphql",
+    "description": "GraphQL support",
+    "keywords": ["yii", "yii2", "extension", "graphql"],
+    "homepage": "https://github.com/mg-code/yii2-graphql",
+    "type": "yii2-extension",
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Maris Graudins",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "*",
+        "webonyx/graphql-php": "0.13.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "mgcode\\graphql\\": ""
+        }
+    }
+}
