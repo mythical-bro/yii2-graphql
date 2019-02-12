@@ -78,7 +78,15 @@ class GraphQLAction extends Action
 
     protected function composeFields($field): array
     {
-        if (is_array($field)) {
+        if (is_string($field)) {
+            $field = new $field();
+            if ($field instanceof Field) {
+                return $field->toArray();
+            }
+        }
+        if ($field instanceof Field) {
+            return $field->toArray();
+        } else if (is_array($field)) {
             return $field;
         }
         throw new InvalidArgumentException();
