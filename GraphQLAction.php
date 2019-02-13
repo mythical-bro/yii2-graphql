@@ -12,6 +12,7 @@ use GraphQL\Error\Error;
 use GraphQL\Error\FormattedError;
 use mgcode\graphql\error\ValidatorException;
 use yii\base\Action;
+use yii\web\HttpException;
 use yii\web\Response;
 use yii\base\InvalidArgumentException;
 use yii\helpers\Json;
@@ -53,7 +54,7 @@ class GraphQLAction extends Action
         // Log error
         foreach ($result->errors as $error) {
             $previous = $error->getPrevious();
-            if ($previous && !($previous instanceof ValidatorException)) {
+            if ($previous) {
                 \Yii::$app->errorHandler->logException($previous);
             }
         }
@@ -134,10 +135,17 @@ class GraphQLAction extends Action
     public function formatError(Error $e)
     {
         $previous = $e->getPrevious();
-        if ($previous && $previous instanceof ValidatorException) {
-            return [
-                'validation' => $previous->formatErrors,
-            ];
+        if ($previous) {
+            if ($previous instanceof ValidatorException) {
+                return [
+                    'validation' => $previous->formatErrors,
+                ];
+            } else if($previous instanceof HttpException) {
+                return [
+                    'statusCode' => $previous->statusCode,
+                    'message' => $previous->getMessage(),
+                ];
+            }
         }
         return FormattedError::createFromException($e, $this->getDebug());
     }
