@@ -140,7 +140,7 @@ class GraphQLAction extends Action
                 return [
                     'validation' => $previous->formatErrors,
                 ];
-            } else if($previous instanceof HttpException) {
+            } else if ($previous instanceof HttpException) {
                 return [
                     'statusCode' => $previous->statusCode,
                     'message' => $previous->getMessage(),
