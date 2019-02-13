@@ -8,6 +8,9 @@ use GraphQL\Executor\Executor;
 use GraphQL\Experimental\Executor\CoroutineExecutor;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Schema;
+use GraphQL\Error\Error;
+use GraphQL\Error\FormattedError;
+use mgcode\graphql\error\ValidatorException;
 use yii\base\Action;
 use yii\web\Response;
 use yii\base\InvalidArgumentException;
@@ -34,7 +37,7 @@ class GraphQLAction extends Action
         // Create schema
         $schema = new Schema([
             'query' => $this->createObject('Query', $this->queries),
-            'mutation' => $this->createObject('Mutation', $this->mutations),
+            'mutation' => !empty($this->mutations) ? $this->createObject('Mutation', $this->mutations) : null,
         ]);
 
         $result = GraphQL::executeQuery(
@@ -45,20 +48,18 @@ class GraphQLAction extends Action
             empty($variables) ? null : $variables,
             empty($operation) ? null : $operation
         );
+        $result->setErrorFormatter([$this, 'formatError']);
 
         // Log error
         foreach ($result->errors as $error) {
-            \Yii::$app->errorHandler->logException($error);
-        }
-
-        // Show debug info
-        $debug = false;
-        if (YII_ENV_DEV) {
-            $debug = Debug::INCLUDE_DEBUG_MESSAGE | Debug::INCLUDE_TRACE;
+            $previous = $error->getPrevious();
+            if ($previous && !($previous instanceof ValidatorException)) {
+                \Yii::$app->errorHandler->logException($previous);
+            }
         }
 
         // Return result
-        return $result->toArray($debug);
+        return $result->toArray($this->getDebug());
     }
 
     protected function createObject($name, array $fields = []): ObjectType
@@ -80,11 +81,11 @@ class GraphQLAction extends Action
     {
         if (is_string($field)) {
             $field = new $field();
-            if ($field instanceof Field) {
+            if ($field instanceof GraphQLField) {
                 return $field->toArray();
             }
         }
-        if ($field instanceof Field) {
+        if ($field instanceof GraphQLField) {
             return $field->toArray();
         } else if (is_array($field)) {
             return $field;
@@ -119,5 +120,25 @@ class GraphQLAction extends Action
             }
         }
         return [$query, $variables, $operation];
+    }
+
+    protected function getDebug()
+    {
+        $debug = false;
+        if (YII_ENV_DEV) {
+            $debug = Debug::INCLUDE_DEBUG_MESSAGE | Debug::INCLUDE_TRACE;
+        }
+        return $debug;
+    }
+
+    public function formatError(Error $e)
+    {
+        $previous = $e->getPrevious();
+        if ($previous && $previous instanceof ValidatorException) {
+            return [
+                'validation' => $previous->formatErrors,
+            ];
+        }
+        return FormattedError::createFromException($e, $this->getDebug());
     }
 }

@@ -6,7 +6,7 @@ use GraphQL\Type\Definition\Type;
 use yii\base\BaseObject;
 use yii\base\InvalidConfigException;
 
-abstract class Field extends BaseObject
+abstract class GraphQLField extends BaseObject
 {
     abstract public function description(): string;
 
