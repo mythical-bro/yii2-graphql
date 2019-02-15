@@ -18,7 +18,7 @@ class ValidatorException extends Exception
      */
     public function __construct($model, $code = 0, Throwable $previous = null)
     {
-        parent::__construct("{$model->formName()} validation failed", $code, $previous);
+        parent::__construct("{$model->formName()} validation failed.", $code, $previous);
         $this->formatModelErrors($model);
     }
 

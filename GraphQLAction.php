@@ -50,14 +50,7 @@ class GraphQLAction extends Action
             empty($operation) ? null : $operation
         );
         $result->setErrorFormatter([$this, 'formatError']);
-
-        // Log error
-        foreach ($result->errors as $error) {
-            $previous = $error->getPrevious();
-            if ($previous) {
-                \Yii::$app->errorHandler->logException($previous);
-            }
-        }
+        $result->setErrorsHandler([$this, 'handleErrors']);
 
         // Return result
         return $result->toArray($this->getDebug());
@@ -134,19 +127,37 @@ class GraphQLAction extends Action
 
     public function formatError(Error $e)
     {
+        $formatter = FormattedError::prepareFormatter(null, $this->getDebug());
+        $error = $formatter($e);
         $previous = $e->getPrevious();
+
         if ($previous) {
             if ($previous instanceof ValidatorException) {
-                return [
+                $error = [
                     'validation' => $previous->formatErrors,
-                ];
+                    'message' => $previous->getMessage(),
+                ] + $error;
             } else if ($previous instanceof HttpException) {
-                return [
+                $error = [
                     'statusCode' => $previous->statusCode,
                     'message' => $previous->getMessage(),
-                ];
+                ] + $error;
             }
         }
-        return FormattedError::createFromException($e, $this->getDebug());
+        return $error;
+    }
+
+    public function handleErrors(array $errors, callable $formatter)
+    {
+        foreach ($errors as $error) {
+            // Try to unwrap exception
+            $error = $error->getPrevious() ?: $error;
+            // Don't report certain GraphQL errors
+            if ($error instanceof ValidatorException || $error instanceof HttpException) {
+                continue;
+            }
+            \Yii::$app->errorHandler->logException($error);
+        }
+        return array_map($formatter, $errors);
     }
 }
