@@ -34,7 +34,7 @@ abstract class GraphQLField extends BaseObject
         return function () use ($resolver, $authorize) {
             $arguments = func_get_args();
             // Authorize request
-            if (method_exists($this, 'authorize') && call_user_func($authorize, $arguments) !== true) {
+            if (method_exists($this, 'authorize') && call_user_func_array($authorize, $arguments) !== true) {
                 throw new ForbiddenHttpException('You are not allowed to perform this action.');
             }
             return call_user_func_array($resolver, $arguments);
