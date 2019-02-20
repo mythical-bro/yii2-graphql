@@ -3,12 +3,15 @@
 namespace mgcode\graphql;
 
 use GraphQL\Type\Definition\FieldDefinition;
+use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 use yii\base\BaseObject;
 
 abstract class GraphQLType extends BaseObject
 {
+    public $inputObject = false;
+
     /**
      * @return string Name must be unique across all system.
      */
@@ -80,12 +83,16 @@ abstract class GraphQLType extends BaseObject
     /**
      * @return ObjectType
      */
-    public static function type(): ObjectType
+    public static function type(): Type
     {
         static $type;
         if ($type === null) {
             $object = new static();
-            $type = new ObjectType($object->toArray());
+            $config = $object->toArray();
+            if ($object->inputObject) {
+                return new InputObjectType($config);
+            }
+            $type = new ObjectType($config);
         }
         return $type;
     }
