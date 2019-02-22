@@ -47,7 +47,12 @@ abstract class GraphQLType extends BaseObject
         $fields = $this->fields();
         $allFields = [];
         foreach ($fields as $name => $field) {
-            if ($field instanceof FieldDefinition) {
+            if (is_string($field)) {
+                /** @var GraphQLField $field */
+                $field = new $field;
+                $field->name = $name;
+                $allFields[$name] = $field->toArray();
+            } else if ($field instanceof FieldDefinition) {
                 $allFields[$field->name] = $field;
             } else {
                 if ($field instanceof Type) {
