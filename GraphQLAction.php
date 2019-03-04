@@ -2,20 +2,25 @@
 
 namespace mgcode\graphql;
 
-use GraphQL\GraphQL;
 use GraphQL\Error\Debug;
-use GraphQL\Executor\Executor;
-use GraphQL\Experimental\Executor\CoroutineExecutor;
-use GraphQL\Type\Definition\ObjectType;
-use GraphQL\Type\Schema;
 use GraphQL\Error\Error;
 use GraphQL\Error\FormattedError;
+use GraphQL\Error\InvariantViolation;
+use GraphQL\Executor\Executor;
+use GraphQL\Experimental\Executor\CoroutineExecutor;
+use GraphQL\GraphQL;
+use GraphQL\Server\RequestError;
+use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Type\Schema;
+use GraphQL\Utils\Utils;
 use mgcode\graphql\error\ValidatorException;
+use mgcode\helpers\ArrayHelper;
 use yii\base\Action;
-use yii\web\HttpException;
-use yii\web\Response;
 use yii\base\InvalidArgumentException;
 use yii\helpers\Json;
+use yii\web\HttpException;
+use yii\web\Response;
+use yii\web\UploadedFile;
 
 class GraphQLAction extends Action
 {
@@ -33,7 +38,17 @@ class GraphQLAction extends Action
 
     public function run()
     {
-        list($query, $variables, $operation) = $this->parseParameters();
+        $params = $this->parseParameters();
+        if (!isset($params['query']) && isset($params[0]['query'])) {
+            throw new Error('Query batching is not supported.');
+        }
+
+        $query = ArrayHelper::getValue($params, 'query');
+        $variables = ArrayHelper::getValue($params, 'variables');
+        if (is_string($variables)) {
+            $variables = json_decode($variables, true);
+        }
+        $operationName = ArrayHelper::getValue($params, 'operationName');
 
         // Create schema
         $schema = new Schema([
@@ -46,8 +61,8 @@ class GraphQLAction extends Action
             $query,
             null,
             null,
-            empty($variables) ? null : $variables,
-            empty($operation) ? null : $operation
+            $variables,
+            $operationName
         );
         $result->setErrorFormatter([$this, 'formatError']);
         $result->setErrorsHandler([$this, 'handleErrors']);
@@ -91,29 +106,77 @@ class GraphQLAction extends Action
      * Parses request parameters
      * @return array
      */
-    protected function parseParameters()
+    protected function parseParameters(): array
     {
-        // Parse parameters using MULTIPART, POST or GET
-        $query = \Yii::$app->request->get('query', \Yii::$app->request->post('query'));
-        $variables = \Yii::$app->request->get('variables', \Yii::$app->request->post('variables'));
-        $operation = \Yii::$app->request->get('operation', \Yii::$app->request->post('operation', null));
-        if (empty($query)) {
-            $rawInput = file_get_contents('php://input');
-            $input = json_decode($rawInput, true);
-            $query = $input['query'];
-            $variables = isset($input['variables']) ? $input['variables'] : [];
-            $operation = isset($input['operation']) ? $input['operation'] : null;
+        $request = \Yii::$app->request;
+        if (!($params = $request->post())) {
+            $params = $request->get();
         }
 
-        // Parameters can be null or array
-        if (!empty($variables) && !is_array($variables)) {
-            try {
-                $variables = Json::decode($variables);
-            } catch (InvalidArgumentException $e) {
-                $variables = null;
+        $contentType = $request->getHeaders()->get('content-type', '');
+        if (mb_stripos($contentType, 'multipart/form-data') !== false) {
+            $this->validateParsedBody($params);
+            return $this->parseMultipartParameters($params);
+        }
+        return $params;
+    }
+
+    protected function validateParsedBody($params)
+    {
+        if (null === $params) {
+            throw new InvariantViolation(
+                'Request is expected to provide parsed body for "multipart/form-data" requests but got null'
+            );
+        }
+
+        if (!is_array($params)) {
+            throw new RequestError(
+                'GraphQL Server expects JSON object or array, but got '.Utils::printSafe($params)
+            );
+        }
+
+        if (empty($params)) {
+            throw new InvariantViolation(
+                'Request is expected to provide parsed body for "multipart/form-data" requests but got empty array'
+            );
+        }
+
+        if (!isset($params['map'])) {
+            throw new RequestError('The request must define a `map`');
+        }
+    }
+
+    protected function parseMultipartParameters($params)
+    {
+        $map = json_decode($params['map'], true);
+        $result = json_decode($params['operations'], true);
+
+        foreach ($map as $fileKey => $locations) {
+            foreach ($locations as $location) {
+                $items = &$result;
+                foreach (explode('.', $location) as $key) {
+                    if (!isset($items[$key]) || !is_array($items[$key])) {
+                        $items[$key] = [];
+                    }
+                    $items = &$items[$key];
+                }
+
+                $file = $_FILES[$fileKey];
+                $items = isset($file['name']) ? $this->createFileInstance($file) : array_map([$this, 'createFileInstance'], $file);
             }
         }
-        return [$query, $variables, $operation];
+        return $result;
+    }
+
+    protected function createFileInstance($file): UploadedFile
+    {
+        return new UploadedFile([
+            'name' => $file['name'],
+            'tempName' => $file['tmp_name'],
+            'type' => $file['type'],
+            'size' => $file['size'],
+            'error' => $file['error'],
+        ]);
     }
 
     protected function getDebug()
@@ -134,14 +197,14 @@ class GraphQLAction extends Action
         if ($previous) {
             if ($previous instanceof ValidatorException) {
                 $error = [
-                    'validation' => $previous->formatErrors,
-                    'message' => $previous->getMessage(),
-                ] + $error;
+                        'validation' => $previous->formatErrors,
+                        'message' => $previous->getMessage(),
+                    ] + $error;
             } else if ($previous instanceof HttpException) {
                 $error = [
-                    'statusCode' => $previous->statusCode,
-                    'message' => $previous->getMessage(),
-                ] + $error;
+                        'statusCode' => $previous->statusCode,
+                        'message' => $previous->getMessage(),
+                    ] + $error;
             }
         }
         return $error;
