@@ -17,7 +17,6 @@ use mgcode\graphql\error\ValidatorException;
 use mgcode\helpers\ArrayHelper;
 use yii\base\Action;
 use yii\base\InvalidArgumentException;
-use yii\helpers\Json;
 use yii\web\HttpException;
 use yii\web\Response;
 use yii\web\UploadedFile;

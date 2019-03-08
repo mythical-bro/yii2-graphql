@@ -11,27 +11,36 @@ class ValidatorException extends Exception
     public $formatErrors = [];
 
     /**
-     * ValidatorException constructor.
-     * @param Model $model
-     * @param int $code
-     * @param Throwable|null $previous
+     * Creates custom validation error
+     * @param array $errors
+     * @return ValidatorException
      */
-    public function __construct($model, $code = 0, Throwable $previous = null)
+    public static function custom(array $errors): self
     {
-        parent::__construct("{$model->formName()} validation failed.", $code, $previous);
-        $this->formatModelErrors($model);
+        $message = "Mutation validation failed.";
+        $exception = new static($message);
+        $exception->formatErrors = $errors;
+        return $exception;
     }
 
     /**
+     * Validation error from Model
      * @param Model $model
+     * @return ValidatorException
+     * @throws \yii\base\InvalidConfigException
      */
-    private function formatModelErrors($model)
+    public static function fromModel(Model $model): self
     {
+        $errors = [];
         foreach ($model->getErrors() as $attribute => $messages) {
-            $this->formatErrors[] = [
+            $errors = [
                 'field' => $attribute,
                 'messages' => $messages,
             ];
         }
+        $message = "{$model->formName()} validation failed.";
+        $exception = new static($message);
+        $exception->formatErrors = $errors;
+        return $exception;
     }
 }
