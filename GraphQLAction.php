@@ -33,6 +33,9 @@ class GraphQLAction extends Action
         parent::init();
         $this->controller->enableCsrfValidation = false;
         \Yii::$app->response->format = Response::FORMAT_JSON;
+        \Yii::$app->request->parsers = [
+            'application/json' => \yii\web\JsonParser::class,
+        ];
         Executor::setImplementationFactory([CoroutineExecutor::class, 'create']);
     }
 
