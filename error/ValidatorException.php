@@ -33,7 +33,7 @@ class ValidatorException extends Exception
     {
         $errors = [];
         foreach ($model->getErrors() as $attribute => $messages) {
-            $errors = [
+            $errors[] = [
                 'field' => $attribute,
                 'messages' => $messages,
             ];
