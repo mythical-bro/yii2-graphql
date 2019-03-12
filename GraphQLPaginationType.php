@@ -54,6 +54,7 @@ class GraphQLPaginationType extends ObjectType
                 'type' => Type::nonNull(Type::int()),
                 'description' => 'Current page of the cursor',
                 'resolve' => function (DataProviderInterface $data) {
+                    $data->prepare();
                     return $data->getPagination()->getPageCount();
                 },
             ],
