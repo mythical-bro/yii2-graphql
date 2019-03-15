@@ -3,8 +3,11 @@
 namespace mgcode\graphql;
 
 use GraphQL\Type\Definition\Type;
+use mgcode\graphql\error\ValidatorException;
 use yii\base\BaseObject;
+use yii\base\DynamicModel;
 use yii\base\InvalidConfigException;
+use yii\helpers\ArrayHelper;
 use yii\web\ForbiddenHttpException;
 
 abstract class GraphQLField extends BaseObject
@@ -26,6 +29,11 @@ abstract class GraphQLField extends BaseObject
         return [];
     }
 
+    public function rules(): array
+    {
+        return [];
+    }
+
     protected function getResolver()
     {
         if (!method_exists($this, 'resolve')) {
@@ -40,6 +48,16 @@ abstract class GraphQLField extends BaseObject
             if (method_exists($this, 'authorize') && call_user_func_array($authorize, $arguments) !== true) {
                 throw new ForbiddenHttpException('You are not allowed to perform this action.');
             }
+
+            $rules = $this->rules();
+            if (sizeof($rules)) {
+                $args = ArrayHelper::getValue($arguments, 1, []);
+                $validation = DynamicModel::validateData($args, $rules);
+                if ($validation->errors) {
+                    throw ValidatorException::fromModel($validation);
+                }
+            }
+
             return call_user_func_array($resolver, $arguments);
         };
     }
