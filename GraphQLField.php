@@ -49,10 +49,15 @@ abstract class GraphQLField extends BaseObject
                 throw new ForbiddenHttpException('You are not allowed to perform this action.');
             }
 
+            // Perform validation
             $rules = $this->rules();
             if (sizeof($rules)) {
                 $args = ArrayHelper::getValue($arguments, 1, []);
-                $validation = DynamicModel::validateData($args, $rules);
+                $attributes = [];
+                foreach(array_keys($this->args()) as $attribute) {
+                    $attributes[$attribute] = array_key_exists($attribute, $args) ? $args[$attribute] : null;
+                }
+                $validation = DynamicModel::validateData($attributes, $rules);
                 if ($validation->errors) {
                     throw ValidatorException::fromModel($validation);
                 }
