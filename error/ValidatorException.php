@@ -24,6 +24,30 @@ class ValidatorException extends Exception
     }
 
     /**
+     * Validation error from attributes
+     * @param array $attributes
+     * @return ValidatorException
+     */
+    public static function fromAttributes(array $attributes): self
+    {
+        $errors = [];
+        foreach ($attributes as $attribute => $messages) {
+            if (!is_array($messages)) {
+                $messages = [$messages];
+            }
+            $errors[] = [
+                'field' => $attribute,
+                'messages' => $messages,
+            ];
+        }
+
+        $message = "Validation failed.";
+        $exception = new static($message);
+        $exception->formatErrors = $errors;
+        return $exception;
+    }
+
+    /**
      * Validation error from Model
      * @param Model $model
      * @return ValidatorException
@@ -31,16 +55,6 @@ class ValidatorException extends Exception
      */
     public static function fromModel(Model $model): self
     {
-        $errors = [];
-        foreach ($model->getErrors() as $attribute => $messages) {
-            $errors[] = [
-                'field' => $attribute,
-                'messages' => $messages,
-            ];
-        }
-        $message = "{$model->formName()} validation failed.";
-        $exception = new static($message);
-        $exception->formatErrors = $errors;
-        return $exception;
+        return static::fromAttributes($model->getErrors());
     }
 }
