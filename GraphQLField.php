@@ -37,13 +37,16 @@ abstract class GraphQLField extends BaseObject
     protected function getResolver()
     {
         if (!method_exists($this, 'resolve')) {
-            return null;
+            throw new InvalidConfigException('Resolve callback is not defined');
         }
+
         $resolver = [$this, 'resolve'];
         $authorize = [$this, 'authorize'];
 
         return function () use ($resolver, $authorize) {
+            // Get resolver arguments
             $arguments = func_get_args();
+
             // Authorize request
             if (method_exists($this, 'authorize') && call_user_func_array($authorize, $arguments) !== true) {
                 throw new ForbiddenHttpException('You are not allowed to perform this action.');
@@ -54,7 +57,7 @@ abstract class GraphQLField extends BaseObject
             if (sizeof($rules)) {
                 $args = ArrayHelper::getValue($arguments, 1, []);
                 $attributes = [];
-                foreach(array_keys($this->args()) as $attribute) {
+                foreach (array_keys($this->args()) as $attribute) {
                     $attributes[$attribute] = array_key_exists($attribute, $args) ? $args[$attribute] : null;
                 }
                 $validation = DynamicModel::validateData($attributes, $rules);
@@ -73,19 +76,12 @@ abstract class GraphQLField extends BaseObject
      */
     public function toArray(): array
     {
-        if (!method_exists($this, 'resolve')) {
-            throw new InvalidConfigException('Resolve callback is not defined');
-        }
-
         $attributes = array_merge([
             'description' => $this->description(),
             'type' => $this->type(),
             'args' => $this->args(),
         ], $this->attributes());
-
-        if ($resolver = $this->getResolver()) {
-            $attributes['resolve'] = $resolver;
-        }
+        $attributes['resolve'] = $this->getResolver();
         return $attributes;
     }
 }
