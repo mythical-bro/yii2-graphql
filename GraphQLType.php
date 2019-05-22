@@ -2,11 +2,12 @@
 
 namespace mgcode\graphql;
 
-use GraphQL\Type\Definition\FieldDefinition;
 use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
+use mgcode\helpers\ArrayHelper;
 use yii\base\BaseObject;
+use yii\web\ForbiddenHttpException;
 
 abstract class GraphQLType extends BaseObject
 {
@@ -44,6 +45,11 @@ abstract class GraphQLType extends BaseObject
 
     protected function getFields(): array
     {
+        $authorizeField = null;
+        if (method_exists($this, 'authorizeField')) {
+            $authorizeField = [$this, 'authorizeField'];
+        }
+
         $fields = $this->fields();
         $allFields = [];
         foreach ($fields as $name => $field) {
@@ -51,20 +57,30 @@ abstract class GraphQLType extends BaseObject
                 /** @var GraphQLField $field */
                 $field = new $field;
                 $field->name = $name;
-                $allFields[$name] = $field->toArray();
-            } else if ($field instanceof FieldDefinition) {
-                $allFields[$field->name] = $field;
+                $field = $field->toArray();
             } else {
                 if ($field instanceof Type) {
                     $field = [
                         'type' => $field
                     ];
                 }
-                if ($resolver = $this->getFieldResolver($name, $field)) {
-                    $field['resolve'] = $resolver;
-                }
-                $allFields[$name] = $field;
+                $field['resolve'] = $this->getFieldResolver($name, $field);
             }
+
+            // Check if columns is visible
+            if ($authorizeField !== null) {
+                $resolver = $field['resolve'];
+                $field['resolve'] = function () use ($name, $authorizeField, $resolver) {
+                    $arguments = func_get_args();
+                    $authorizeArgs = array_merge([$name], $arguments);
+                    if (call_user_func_array($authorizeField, $authorizeArgs) !== true) {
+                        throw new ForbiddenHttpException('You are not allowed to perform this action.');
+                    }
+                    return call_user_func_array($resolver, $arguments);
+                };
+            }
+
+            $allFields[$name] = $field;
         }
         return $allFields;
     }
@@ -82,7 +98,12 @@ abstract class GraphQLType extends BaseObject
                 return call_user_func_array($resolver, $args);
             };
         }
-        return null;
+
+        return function () use ($name) {
+            $arguments = func_get_args();
+            $root = $arguments[0];
+            return ArrayHelper::getValue($root, $name);
+        };
     }
 
     /**
