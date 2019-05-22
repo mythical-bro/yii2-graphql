@@ -13,6 +13,8 @@ use GraphQL\Server\RequestError;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Schema;
 use GraphQL\Utils\Utils;
+use GraphQL\Validator\DocumentValidator;
+use GraphQL\Validator\Rules\DisableIntrospection;
 use mgcode\graphql\error\ValidatorException;
 use mgcode\helpers\ArrayHelper;
 use yii\base\Action;
@@ -57,6 +59,11 @@ class GraphQLAction extends Action
             'query' => $this->createObject('Query', $this->queries),
             'mutation' => !empty($this->mutations) ? $this->createObject('Mutation', $this->mutations) : null,
         ]);
+
+        // Disable scheme introspection
+        if (!$this->getDebug()) {
+            DocumentValidator::addRule(new DisableIntrospection());
+        }
 
         $result = GraphQL::executeQuery(
             $schema,
@@ -184,7 +191,7 @@ class GraphQLAction extends Action
     protected function getDebug()
     {
         $debug = false;
-        if (YII_ENV_DEV) {
+        if (YII_ENV_DEV || YII_ENV_TEST) {
             $debug = Debug::INCLUDE_DEBUG_MESSAGE | Debug::INCLUDE_TRACE;
         }
         return $debug;
