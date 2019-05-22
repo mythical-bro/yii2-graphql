@@ -95,9 +95,10 @@ abstract class GraphQLType extends BaseObject
             $object = new static();
             $config = $object->toArray();
             if ($object->inputObject) {
-                return new InputObjectType($config);
+                $type = new InputObjectType($config);
+            } else {
+                $type = new ObjectType($config);
             }
-            $type = new ObjectType($config);
         }
         return $type;
     }
