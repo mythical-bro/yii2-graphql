@@ -15,21 +15,21 @@ abstract class GraphQLField extends BaseObject
     /** @var string|null Used for custom fields */
     public $name;
 
-    abstract public function description(): string;
+    abstract public function description();
 
-    abstract public function type(): Type;
+    abstract public function type();
 
-    public function attributes(): array
+    public function attributes()
     {
         return [];
     }
 
-    public function args(): array
+    public function args()
     {
         return [];
     }
 
-    public function rules(): array
+    public function rules()
     {
         return [];
     }
@@ -74,7 +74,7 @@ abstract class GraphQLField extends BaseObject
      * Convert instance to an array.
      * @return array
      */
-    public function toArray(): array
+    public function toArray()
     {
         $attributes = array_merge([
             'description' => $this->description(),

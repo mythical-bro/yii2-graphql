@@ -15,7 +15,7 @@ class ValidatorException extends Exception
      * @param array $errors
      * @return ValidatorException
      */
-    public static function custom(array $errors): self
+    public static function custom(array $errors)
     {
         $message = "Mutation validation failed.";
         $exception = new static($message);
@@ -28,7 +28,7 @@ class ValidatorException extends Exception
      * @param array $attributes
      * @return ValidatorException
      */
-    public static function fromAttributes(array $attributes): self
+    public static function fromAttributes(array $attributes)
     {
         $errors = [];
         foreach ($attributes as $attribute => $messages) {
@@ -53,7 +53,7 @@ class ValidatorException extends Exception
      * @return ValidatorException
      * @throws \yii\base\InvalidConfigException
      */
-    public static function fromModel(Model $model): self
+    public static function fromModel(Model $model)
     {
         return static::fromAttributes($model->getErrors());
     }

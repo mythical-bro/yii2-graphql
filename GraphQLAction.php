@@ -7,7 +7,6 @@ use GraphQL\Error\Error;
 use GraphQL\Error\FormattedError;
 use GraphQL\Error\InvariantViolation;
 use GraphQL\Executor\Executor;
-use GraphQL\Experimental\Executor\CoroutineExecutor;
 use GraphQL\GraphQL;
 use GraphQL\Server\RequestError;
 use GraphQL\Type\Definition\ObjectType;
@@ -35,9 +34,8 @@ class GraphQLAction extends Action
         $this->controller->enableCsrfValidation = false;
         \Yii::$app->response->format = Response::FORMAT_JSON;
         \Yii::$app->request->parsers = [
-            'application/json' => \yii\web\JsonParser::class,
+            'application/json' => get_class(new  \yii\web\JsonParser()),
         ];
-        Executor::setImplementationFactory([CoroutineExecutor::class, 'create']);
     }
 
     public function run()
@@ -80,7 +78,7 @@ class GraphQLAction extends Action
         return $result->toArray($this->getDebug());
     }
 
-    protected function createObject($name, array $fields = []): ObjectType
+    protected function createObject($name, array $fields = [])
     {
         $config = [
             'name' => $name,
@@ -95,7 +93,7 @@ class GraphQLAction extends Action
         return new ObjectType($config);
     }
 
-    protected function composeFields($field): array
+    protected function composeFields($field)
     {
         if (is_string($field)) {
             $field = new $field();
@@ -115,7 +113,7 @@ class GraphQLAction extends Action
      * Parses request parameters
      * @return array
      */
-    protected function parseParameters(): array
+    protected function parseParameters()
     {
         $request = \Yii::$app->request;
         if (!($params = $request->post())) {
@@ -177,7 +175,7 @@ class GraphQLAction extends Action
         return $result;
     }
 
-    protected function createFileInstance($file): UploadedFile
+    protected function createFileInstance($file)
     {
         return new UploadedFile([
             'name' => $file['name'],

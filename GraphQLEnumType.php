@@ -10,15 +10,15 @@ abstract class GraphQLEnumType extends BaseObject
     /**
      * @return string Name must be unique across all system.
      */
-    abstract public function name(): string;
+    abstract public function name();
 
     /**
      * See http://webonyx.github.io/graphql-php/type-system/enum-types/ for configuration.
      * @return array
      */
-    abstract public function values(): array;
+    abstract public function values();
 
-    public function description(): ?string
+    public function description()
     {
         return null;
     }
@@ -27,7 +27,7 @@ abstract class GraphQLEnumType extends BaseObject
      * Convert instance to an array.
      * @return array
      */
-    public function toArray(): array
+    public function toArray()
     {
         $attributes = [
             'name' => $this->name(),
@@ -42,7 +42,7 @@ abstract class GraphQLEnumType extends BaseObject
     /**
      * @return EnumType
      */
-    public static function type(): EnumType
+    public static function type()
     {
         static $type;
         if ($type === null) {

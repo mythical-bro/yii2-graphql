@@ -16,11 +16,11 @@ abstract class GraphQLType extends BaseObject
     /**
      * @return string Name must be unique across all system.
      */
-    abstract public function name(): string;
+    abstract public function name();
 
-    abstract public function fields(): array;
+    abstract public function fields();
 
-    public function description(): ?string
+    public function description()
     {
         return null;
     }
@@ -29,7 +29,7 @@ abstract class GraphQLType extends BaseObject
      * Convert instance to an array.
      * @return array
      */
-    public function toArray(): array
+    public function toArray()
     {
         $attributes = [
             'name' => $this->name(),
@@ -43,7 +43,7 @@ abstract class GraphQLType extends BaseObject
         return $attributes;
     }
 
-    protected function getFields(): array
+    protected function getFields()
     {
         $authorizeField = null;
         if (method_exists($this, 'authorizeField')) {
@@ -109,7 +109,7 @@ abstract class GraphQLType extends BaseObject
     /**
      * @return ObjectType
      */
-    public static function type(): Type
+    public static function type()
     {
         static $type;
         if ($type === null) {
