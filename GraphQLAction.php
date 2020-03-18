@@ -2,23 +2,15 @@
 
 namespace mgcode\graphql;
 
-use GraphQL\Error\Debug;
 use GraphQL\Error\Error;
-use GraphQL\Error\FormattedError;
 use GraphQL\Error\InvariantViolation;
-use GraphQL\Executor\Executor;
 use GraphQL\GraphQL;
-use GraphQL\Server\RequestError;
+use GraphQL\Schema;
 use GraphQL\Type\Definition\ObjectType;
-use GraphQL\Type\Schema;
-use GraphQL\Utils\Utils;
 use GraphQL\Validator\DocumentValidator;
-use GraphQL\Validator\Rules\DisableIntrospection;
-use mgcode\graphql\error\ValidatorException;
 use mgcode\helpers\ArrayHelper;
 use yii\base\Action;
 use yii\base\InvalidArgumentException;
-use yii\web\HttpException;
 use yii\web\Response;
 use yii\web\UploadedFile;
 
@@ -58,12 +50,11 @@ class GraphQLAction extends Action
             'mutation' => !empty($this->mutations) ? $this->createObject('Mutation', $this->mutations) : null,
         ]);
 
-        // Disable scheme introspection
-        if (!$this->getDebug()) {
-            DocumentValidator::addRule(new DisableIntrospection());
-        }
+        /** @var \GraphQL\Validator\Rules\QueryComplexity $queryComplexity */
+        $queryComplexity = DocumentValidator::getRule('QueryComplexity');
+        $queryComplexity->setMaxQueryComplexity($maxQueryComplexity = 1000);
 
-        $result = GraphQL::executeQuery(
+        return GraphQL::execute(
             $schema,
             $query,
             null,
@@ -71,11 +62,6 @@ class GraphQLAction extends Action
             $variables,
             $operationName
         );
-        $result->setErrorFormatter([$this, 'formatError']);
-        $result->setErrorsHandler([$this, 'handleErrors']);
-
-        // Return result
-        return $result->toArray($this->getDebug());
     }
 
     protected function createObject($name, array $fields = [])
@@ -137,7 +123,7 @@ class GraphQLAction extends Action
         }
 
         if (!is_array($params)) {
-            throw new RequestError(
+            throw new InvalidArgumentException(
                 'GraphQL Server expects JSON object or array, but got '.Utils::printSafe($params)
             );
         }
@@ -149,7 +135,7 @@ class GraphQLAction extends Action
         }
 
         if (!isset($params['map'])) {
-            throw new RequestError('The request must define a `map`');
+            throw new InvalidArgumentException('The request must define a `map`');
         }
     }
 
@@ -184,50 +170,5 @@ class GraphQLAction extends Action
             'size' => $file['size'],
             'error' => $file['error'],
         ]);
-    }
-
-    protected function getDebug()
-    {
-        $debug = false;
-        if (YII_ENV_DEV || YII_ENV_TEST) {
-            $debug = Debug::INCLUDE_DEBUG_MESSAGE | Debug::INCLUDE_TRACE;
-        }
-        return $debug;
-    }
-
-    public function formatError(Error $e)
-    {
-        $formatter = FormattedError::prepareFormatter(null, $this->getDebug());
-        $error = $formatter($e);
-        $previous = $e->getPrevious();
-
-        if ($previous) {
-            if ($previous instanceof ValidatorException) {
-                $error = [
-                        'validation' => $previous->formatErrors,
-                        'message' => $previous->getMessage(),
-                    ] + $error;
-            } else if ($previous instanceof HttpException) {
-                $error = [
-                        'statusCode' => $previous->statusCode,
-                        'message' => $previous->getMessage(),
-                    ] + $error;
-            }
-        }
-        return $error;
-    }
-
-    public function handleErrors(array $errors, callable $formatter)
-    {
-        foreach ($errors as $error) {
-            // Try to unwrap exception
-            $error = $error->getPrevious() ?: $error;
-            // Don't report certain GraphQL errors
-            if ($error instanceof ValidatorException || $error instanceof HttpException) {
-                continue;
-            }
-            \Yii::$app->errorHandler->logException($error);
-        }
-        return array_map($formatter, $errors);
     }
 }
