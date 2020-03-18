@@ -10,7 +10,7 @@ use GraphQL\Executor\Executor;
 use GraphQL\GraphQL;
 use GraphQL\Server\RequestError;
 use GraphQL\Type\Definition\ObjectType;
-use GraphQL\Schema;
+use GraphQL\Type\Schema;
 use GraphQL\Utils\Utils;
 use GraphQL\Validator\DocumentValidator;
 use GraphQL\Validator\Rules\DisableIntrospection;
