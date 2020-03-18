@@ -10,7 +10,7 @@ use GraphQL\Executor\Executor;
 use GraphQL\GraphQL;
 use GraphQL\Server\RequestError;
 use GraphQL\Type\Definition\ObjectType;
-use GraphQL\Type\Schema;
+use GraphQL\Schema;
 use GraphQL\Utils\Utils;
 use GraphQL\Validator\DocumentValidator;
 use GraphQL\Validator\Rules\DisableIntrospection;
@@ -34,7 +34,7 @@ class GraphQLAction extends Action
         $this->controller->enableCsrfValidation = false;
         \Yii::$app->response->format = Response::FORMAT_JSON;
         \Yii::$app->request->parsers = [
-            'application/json' => get_class(new  \yii\web\JsonParser()),
+            'application/json' => 'yii\web\JsonParser',
         ];
     }
 
