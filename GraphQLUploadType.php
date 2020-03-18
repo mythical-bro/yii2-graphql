@@ -5,6 +5,7 @@ namespace mgcode\graphql;
 use GraphQL\Type\Definition\ScalarType;
 use GraphQL\Error\Error;
 use GraphQL\Error\InvariantViolation;
+use GraphQL\Utils;
 use yii\web\UploadedFile;
 
 class GraphQLUploadType extends ScalarType

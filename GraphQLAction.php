@@ -7,6 +7,7 @@ use GraphQL\Error\InvariantViolation;
 use GraphQL\GraphQL;
 use GraphQL\Schema;
 use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Utils;
 use GraphQL\Validator\DocumentValidator;
 use mgcode\helpers\ArrayHelper;
 use yii\base\Action;
