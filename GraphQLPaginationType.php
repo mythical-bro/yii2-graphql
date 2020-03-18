@@ -18,7 +18,7 @@ class GraphQLPaginationType extends ObjectType
         parent::__construct($config);
     }
 
-    protected function getPaginationFields(Type $type)
+    protected function getPaginationFields($type)
     {
         return [
             'data' => [
